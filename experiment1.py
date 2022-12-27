@@ -11,6 +11,7 @@ D = 300  # initial dimension
 MU1 = np.random.normal(size=(N, D))
 MU2 = np.random.normal(size=(N, D))
 GAMMA, COSTS = emd(MU1, MU2)
+TRUE_COST = np.sum(GAMMA * COSTS)
 
 M_VALUES = [3, 10, 30, 100, 300]
 K = 30
@@ -34,4 +35,4 @@ def sweep_projection_dimension():
 
 if __name__ == "__main__":
     total_costs = sweep_projection_dimension()
-    np.savez_compressed("results/exp1.npz", m_values=np.array(M_VALUES), total_costs=total_costs)
+    np.savez_compressed("results/exp1_2.npz", m_values=np.array(M_VALUES), total_costs=total_costs, true_cost=TRUE_COST)
