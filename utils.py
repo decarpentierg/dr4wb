@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 import ot
 
 def emd(mu1, mu2):
@@ -13,3 +14,10 @@ def emd(mu1, mu2):
     assert log["warning"] is None, "ot.emd encountered a problem"
     # return transportation matrix and transportation costs
     return gamma, costs  # shape (n1, n2)
+
+
+def plot2D(mu1, mu2, gamma):
+    ot.plot.plot2D_samples_mat(mu1[:, :2], mu2[:, :2], gamma)
+    plt.scatter(mu1[:, 0], mu1[:, 1])
+    plt.scatter(mu2[:, 0], mu2[:, 1])
+    plt.show()
