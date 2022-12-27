@@ -21,18 +21,18 @@ def experiment(m):
     projection = np.random.normal(size=(m, D)) / np.sqrt(m)
     mu1_ = MU1 @ projection.T
     mu2_ = MU2 @ projection.T
-    return emd(mu1_, mu2_)
+    gamma, _ = emd(mu1_, mu2_)
+    return np.sum(gamma * COSTS)
 
 
 def sweep_projection_dimension():
     total_costs = np.zeros((len(M_VALUES), K))
     for m_idx, m in tqdm(enumerate(M_VALUES)):
         for k in range(K):
-            gamma = experiment(m)
-            total_costs[m_idx, k] = np.sum(gamma * COSTS)
+            total_costs[m_idx, k] = experiment(m)
     return total_costs
 
 
 if __name__ == "__main__":
     total_costs = sweep_projection_dimension()
-    np.savez_compressed("results/exp1_2.npz", m_values=np.array(M_VALUES), total_costs=total_costs, true_cost=TRUE_COST)
+    np.savez_compressed("results/exp1_3.npz", m_values=np.array(M_VALUES), total_costs=total_costs, true_cost=TRUE_COST)
