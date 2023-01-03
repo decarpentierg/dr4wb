@@ -1,0 +1,148 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+
+% \usepackage{hyperref}
+
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+\usepackage{biblatex}
+\addbibresource{biblio.bib}
+
+\include{macros}
+
+\newtheorem{theorem}{Theorem}
+
+\title{Dimensionality Reduction for Wasserstein Barycenter \\[1ex] \large Optimal Transport Course - Validation Project}
+\author{Gonzague de Carpentier}
+\date{January 2023}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+\subsection{Presentation of the problem}
+
+A popular way to define a notion of barycenter on non-euclidian metric spaces is the notion of Fréchet mean. Given a set of points $(x_1, ..., x_k)$ in a metric space $(\MM, d)$ and a set of non-negative weights $(\lambda_1, ..., \lambda_k)$ that sum to 1, a Fréchet mean of $(x_1, ..., x_k)$ with the weights $(\lambda_1, ..., \lambda_k)$ is defined as any solution of following minimization problem:
+
+$$\arg \min_{x \in \MM} \sum_{i=1}^k \lambda_i d(x_i, x)$$
+
+This notion enables in particular to define a notion of \emph{barycenter} between probability distributions for each possible notion of \emph{distance} between probability distributions. If we take for $\MM$ a set $\PP$ of probability distributions on $\R^d$ and for $d$ the Wasserstein distance under the $L_p$ objective between probability distributions, then we get the notion of \emph{Wasserstein barycenter (WB)} between the probability distributions. In short, a Wasserstein barycenter $\nu^*$ of the probability distributions $\mu_1, ..., \mu_k$ with the weights $\lambda_1, ..., \lambda_k$ is defined as
+
+$$\nu^* \in \arg \min_{\nu \in \PP} \sum_{i=1}^k \lambda_i W_p(\mu_i, \nu)^p$$
+
+In the case of discrete input distributions, one can show that any Wasserstein barycenter $\nu^*$ is discrete, and that there exists a barycenter $\nu^*$ such that $|\nu^*| \leq \sum_{i=1}^k |\mu_i| - m + 1$, where $|\mu_i|$ denotes the support size of $\mu_i$ (\cite{borgwardt_computational_2022}). However, finding the support points of $\nu^*$ and optimizing their weights is NP-hard. More precisely, all known algorithm suffer an exponential dependance on the dimension. In \cite{izzo_dimensionality_2021}, the authors propose a dimensionality reduction method that enables to accelerate such algorithms. In this report, I present this method and numerical experiments I did to analyze its performance.
+
+\subsection{Previous works}
+
+Let us first review some known algorithms to compute Wasserstein barycenters in the discrete case. Those algorithms can be classified in two categories: the one that fix the support points of the barycenter and optimize only the weights (fixed support), and the one that optimize on both the weights and the support points (free support).
+
+There exist two class of algorithms for the computation of Wasserstein barycenters with discrete support.
+
+\paragraph{Fixed-support} 
+
+\paragraph{Free support} \cite{cuturi_fast_2014}
+
+\subsection{Contributions}
+
+\section{Presentation of the method}
+
+\subsection{Characterization of the Wasserstein barycenter}
+
+Let $\nu^* = \sum_{j=1}^n b^*_j \delta_{y^*_j}$ be a Wasserstein barycenter of the distributions $\mu_1, ..., \mu_k$, where $\mu_i = \sum_{i=1}^T a_{i, j} \delta_{x_{i, j}}$.
+
+Then we know that 
+
+$$W_p(\mu_i, \nu)^p = \begin{cases}
+    \underset{w}{\min} \sum_{i, j, j'} w_{i,j,j'} ||x_{i, j} - y_{j'}||^p \\
+    \text{s.t. } \sum_j w_{i,j,j'} = b_j \text{ and } \sum_{j'} w_{i,j,j'} = a_{i,j}
+\end{cases}$$
+
+where $w \in \R^{k\times T \times n}$.
+
+Therefore,
+
+\begin{align}
+    \label{eqn:discretewb}
+    b^*, y^*, w^* \in 
+    \begin{cases}
+        \arg\min_{b, y, w} \sum_{i, j, j'} w_{i,j,j'} ||x_{i, j} - y_{j'}||^p \\
+        \text{s.t. } \sum_j w_{i,j,j'} = b_j \text{ and } \sum_{j'} w_{i,j,j'} = a_{i,j}
+    \end{cases}
+\end{align}
+
+Therefore, if we know $w^*$, we can deduce from it $b^*$ and $y^*$ by computing
+
+\begin{align}
+    b^*_j &= \sum_j w^*_{i,j,j'}  \label{eqn:b}\\
+    y^* &\in \arg \min_y \sum_{i, j, j'} w_{i,j,j'} ||x_{i, j} - y_{j'}||^p \label{eqn:y}
+\end{align}
+
+In the case $p=2$, the second equality becomes
+
+\begin{align*}
+    y^*_{j'} &= \frac {\sum_{i, j} w_{i,j,j'} x_{i, j}} {\sum_{i, j} w_{i,j,j'}}
+\end{align*}
+
+\subsection{Johnson-Lindenstrauss lemma}
+\label{subscn:johnson}
+
+The methods of the authors relies on following theorem:
+
+\begin{theorem}[Johnson-Lindenstrauss]
+Let $\eps \in (0, 1/2)$. Let $x_1, ..., x_n \in \R^d$ and $k \geq \f {20 \log n} {\eps^2}$. There exists a Lipschitz mapping $f: \R^d \to \R^m$ such that
+$$\forall 1 \leq i, j \leq n, \quad (1 - \eps) ||x_i - x_j||^2 \leq ||f(x_i) - f(x_j)||^2 \leq (1 + \eps) ||x_i - x_j||^2$$
+\end{theorem}
+
+which itself can be proved using following theorem:
+
+\begin{theorem}[Norm preservation]
+Let $x\in \R^d$. Assume that the entries in $A\subset \R^{k\times d}$ are sampled independantly from $\NN(0, 1)$. Then,
+$$\P \l( (1 - \eps) ||x||^2 \leq \l\lVert \f 1 {\sqrt k} A x \r\rVert^2 \leq (1 + \eps) ||x||^2 \r) \geq 1 - 2e^{-(\eps^2 -\eps^3 k/4} $$
+\end{theorem}
+
+Thus a good candidate for a Johnson-Lindenstrauss projection is simply the function $f: x \mapsto \f 1 {\sqrt k} A x$
+
+\subsection{Proposed method}
+
+From the considerations of previous subsection, the authors of \cite{izzo_dimensionality_2021} deduce following dimensionality reduction method for the computation of discrete Wasserstein barycenters:
+
+\begin{enumerate}
+    \item Project the points $(x_{i, j})$ into a low dimensional space $\R^m$ using a projection that preserves well the pairwise distances between the input distribution support points (e.g. a random gaussian projection, see subsection \ref{subscn:johnson}).
+    \item Compute the Wasserstein barycenter in the low dimensional space.
+    \item Compute the optimal couplings $w^*$ for the low dimensional Wasserstein barycenter.
+    \item Use $w^*$ to compute $y^*$ and $b^*$ in the original high dimensional space by solving equations \ref{eqn:b} and \ref{eqn:y}.
+\end{enumerate}
+
+\section{Theoritical guarantees}
+
+
+
+\section{Numerics}
+
+\subsection{Choice of a Wasserstein barycenter algorithm}
+
+To implement the method of the authors and test it, I had to choose a specific algorithm for the computation of the Wasserstein barycenter. I first looked at a Python implementation of such an algorithm in the Python Optimal Transport library, and found following functions:
+
+\begin{itemize}
+    \item \verb|ot.lp.barycenter|: solves the linear program that one gets by fixing $y$ in the minimization problem \ref{eqn:discretewb}.
+    \item \verb|ot.bregman.barycenter|: same as \verb|ot.lp.barycenter| but with entropic regularization, as proposed in \cite{benamou_iterative_2015}.
+    \item \verb|ot.lp.free_support_barycenter|: solves the linear program that one gets by fixing $b$ in the minimization problem \ref{eqn:discretewb}. Implements a variant of the method proposed in \cite{cuturi_fast_2014}.
+\end{itemize}
+
+As one can see, none of this three solves the entire minimization problem \ref{eqn:discretewb}. Moreover, this algorithms all have a linear dependance in the dimension, so dimensionality reduction wouldn't be very useful for them.
+
+Therefore, I decided to take a look at the algorithm used by the authors of \cite{izzo_dimensionality_2021} for their paper. The authors indicate that they used the implementation \cite{ye_efficient_2022} with default settings. This GitHub repository implements several Wasserstein barycenter algorithms in MatLab. By taking a look at the main function \verb|Wasserstein_Barycenter.m|, I figured out that the default method is Bregmann ADMM, a method proposed in \cite{ye_fast_2017}. However, I didn't find any Python implementation of this method.
+
+A special case of Wasserstein barycenters is the case $k=2$. Indeed, in this case, one can show that the Wasserstein barycenter of $\mu_1$ and $\mu_2$ can be computed by comp
+
+\section{Conclusion and perspective}
+
+\section{Connection with the course}
+
+\printbibliography
+
+\end{document}
+
