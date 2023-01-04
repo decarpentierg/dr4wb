@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from utils import emd
 from tqdm import tqdm
+from gensim.models import KeyedVectors
 
 class Experiment:
     def __init__(self, mu1, mu2) -> None:
@@ -52,3 +53,8 @@ qr1 = exp1.sweep_projection_dimension(M_VALUES, K)
 qr2 = exp2.sweep_projection_dimension(M_VALUES, K)
 # plot_quality_ratios(M_VALUES, qr1, title="Experiment 1")
 # plot_quality_ratios(M_VALUES, qr2, title="Experiment 1")
+
+MU4 = KeyedVectors.load_word2vec_format("data/wiki.en.align.10k.vec", binary=False).get_normed_vectors()[:100]
+MU5 = KeyedVectors.load_word2vec_format("data/wiki.fr.align.10k.vec", binary=False).get_normed_vectors()[:100]
+exp3 = Experiment(MU4, MU5)
+qr3 = exp3.sweep_projection_dimension(M_VALUES, K)
