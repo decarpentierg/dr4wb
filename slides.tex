@@ -1,0 +1,178 @@
+\documentclass{beamer}
+\usepackage[utf8]{inputenc}
+
+\usepackage{hyperref}
+
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{wrapfig}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+\usepackage{biblatex}
+\addbibresource{biblio.bib}
+
+\include{macros}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+
+%------------------------------------------------------------
+%Information to be included in the title page:
+\title[Dimensionality Reduction for WB]{``Dimensionality Reduction for Wasserstein Barycenter"}
+
+\subtitle{
+    Zachary Izzo, Sandeep Silwal and Samson Zhou, October 2021
+}
+
+\author{Gonzague de Carpentier}
+
+\date{January 2023}
+%------------------------------------------------------------
+
+\begin{document}
+
+\frame{\titlepage}
+
+%------------------------------------------------------------
+\begin{frame}
+\frametitle{Introduction}
+
+Discrete Wasserstein barycenter problem:
+
+\begin{itemize}
+    \item Given:
+    \begin{itemize}
+        \item Discrete measures: $\mu^{(i)} = \sum_{j=1}^T a^{(i)}_j \delta_{x^{(i)}_j}$ where $x^{(i)}_j \in \R^d$
+        \item Positive weights $(\lambda^{(1)}, ..., \lambda^{(k)})$
+    \end{itemize}
+    \item Compute: 
+    $$\nu^* \in \arg \min_{\nu \in \PP} \sum_{i=1}^k \lambda^{(i)} W_p(\mu^{(i)}, \nu)^p$$
+    where $\PP = \l\{ \sum_{j=1}^n b_j \delta_{y_j} , b_j \geq 0, y_j \in \R^d \r\}$
+\end{itemize}
+
+Issue: computation of discrete WB is NP-hard (runtime exponential in dimension) \cite{altschuler_wasserstein_2020}
+
+Proposed approach in \cite{izzo_dimensionality_2021} : dimensionality reduction
+
+\end{frame}
+%------------------------------------------------------------
+
+%------------------------------------------------------------
+\begin{frame}
+\frametitle{Characterization of the Wasserstein Barycenter}
+
+Let $w^{*(i)}$ be the optimal coupling between $\mu^{(i)}$ and $\nu^*$
+$$W_p(\mu^{(i)}, \nu^*)^p = \sum_{j, j'} w^{*(i)}_{j,j'} ||x^{(i)}_j - y_{j'}||^p$$
+
+The weights $b^*$, support points $y^*$ and optimal couplings $w^*$ of a Wasserstein barycenter are solution of following minimization problem:
+\begin{align}
+    \label{eqn:discretewb}
+    b^*, y^*, w^* \in 
+    \begin{cases}
+        \arg\min_{b, y, w} \sum_{i, j, j'} w^{(i)}_{j,j'} ||x^{(i)}_j - y_{j'}||^p \\
+        \text{s.t. } \sum_{j'} w^{(i)}_{j,j'} = a^{(i)}_j \text{ and } \sum_j w^{(i)}_{j,j'} = b_{j'}
+    \end{cases}
+\end{align}
+
+In particular, $b^*_{j'} = \sum_j w^{*(i)}_{j,j'}$ and $y^* = \arg\min_y \sum_{i, j, j'} w^{*(i)}_{j,j'} ||x^{(i)}_j - y_{j'}||^p$.
+\end{frame}
+%------------------------------------------------------------
+
+%------------------------------------------------------------
+\begin{frame}
+\frametitle{Johnson-Lindenstrauss projections}
+
+From now on $p = 2$. \\
+Let $X \subset \R^d$ be a set of $n$ points.
+Let $A \in \R^{m \times d}$ be a random matrix whose entries are sampled independently from $\NN(0, 1/m)$. Then
+
+\begin{align*}
+    \P(\forall u, v \in X, (1 - \eps) ||u - v||^2 \leq ||Au - Av||^2 \leq (1 + \eps) ||u - v||^2 ) &\\
+    \geq 1 - 2n^2e^{-(\eps^2-\eps^3)m / 4} &
+\end{align*}
+
+All distances are preserved up to a factor $1 \pm \eps$ with very high probability if $m$ is big enough. \cite{kakade_random_2009}
+\end{frame}
+%------------------------------------------------------------
+
+%------------------------------------------------------------
+\begin{frame}
+The authors propose following dimensionality reduction method:
+\frametitle{Proposed method}
+\begin{enumerate}
+    \item Project measures $\mu^{(i)}$ into $\R^m$ using the projection $A$: $\Tilde{\mu}^{(i)} = \sum_{j=1}^T a^{(i)}_j \delta_{Ax^{(i)}_j}$
+    \item Compute the Wasserstein barycenter $\Tilde{\nu}^*$ of the $(\Tilde{\mu}^{(i)})$ and associated weights $\Tilde{b}^*$, support points $\Tilde{y}^*$ and optimal couplings $\Tilde{w}^*$
+    \item Compute an approximation of the Wasserstein barycenter in $\R^d$ by computing $b^*$ and $y^*$ from $w^* := \Tilde{w}^*$
+\end{enumerate}
+Advantage: can be used along with any algorithm for the computation of the WB.
+\end{frame}
+%------------------------------------------------------------
+
+%------------------------------------------------------------
+\begin{frame}
+\frametitle{Numerics}
+I tested the method on 3 types of pairs of distributions $(\mu^{(1)}, \mu^{(2)})$:
+\begin{itemize}
+    \item Uniform weights $a^{(i)}_j = 1 / T$ and $x^{(i)}_j$ sampled randomly and independently from $\NN(0, 1)$
+    \item Same as before but with offset of 10 on the first dimension for $\mu^{(2)}$
+    \item Aligned word vectors for French and English in dimension 300 downloaded from fastText \cite{noauthor_aligned_nodate}.
+\end{itemize}
+
+To compute the WBs, I interpolated the optimal transportation plans computed with $\mathbf{ot.emd}$ from the Python Optimal Transport library.
+$$\text{Quality measure} = \frac {\text{cost of the WB computed with DR}} {\text{cost of the true WB}}$$
+
+\end{frame}
+%------------------------------------------------------------
+
+%------------------------------------------------------------
+\begin{frame}
+\frametitle{Influence of the projected dimension $m$ on the solution quality}
+\begin{figure}
+  \centering
+  \includegraphics[keepaspectratio, width=\textwidth]{graphics/experiment_1.png}
+\end{figure}
+\end{frame}
+%------------------------------------------------------------
+
+%------------------------------------------------------------
+\begin{frame}
+\frametitle{Influence of the original dimension $d$ on the solution quality}
+\begin{figure}
+  \centering
+  \includegraphics[keepaspectratio, width=\textwidth]{graphics/experiment_4.png}
+\end{figure}
+\end{frame}
+%------------------------------------------------------------
+
+%------------------------------------------------------------
+\begin{frame}
+\frametitle{Influence of the support size $T$ on the solution quality}
+\begin{figure}
+  \centering
+  \includegraphics[keepaspectratio, width=\textwidth]{graphics/experiment_2.png}
+\end{figure}
+\end{frame}
+%------------------------------------------------------------
+
+%------------------------------------------------------------
+\begin{frame}
+\frametitle{Conclusion}
+\begin{itemize}
+    \item Powerful method: get rid of the exponential dependence in the dimension.
+    \item However: projected dimension proportional to $1 / \eps^2$.
+    \item In practice, most algorithms used to compute the WB depend linearly on the dimension: fixed support, or free support without theoretical guarantees.
+\end{itemize}
+\end{frame}
+%------------------------------------------------------------
+
+%------------------------------------------------------------
+\begin{frame}
+\frametitle{References}
+\printbibliography
+\end{frame}
+%------------------------------------------------------------
+
+\end{document}
+
+

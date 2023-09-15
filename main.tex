@@ -1,8 +1,11 @@
 \documentclass[11pt,a4paper]{article}
 \usepackage[utf8]{inputenc}
 
-% \usepackage{hyperref}
+\usepackage{hyperref}
 
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{wrapfig}
 \usepackage{algorithm}
 \usepackage{algpseudocode}
 
@@ -12,6 +15,8 @@
 \include{macros}
 
 \newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
 
 \title{Dimensionality Reduction for Wasserstein Barycenter \\[1ex] \large Optimal Transport Course - Validation Project}
 \author{Gonzague de Carpentier}
@@ -25,39 +30,39 @@
 
 \subsection{Presentation of the problem}
 
-A popular way to define a notion of barycenter on non-euclidian metric spaces is the notion of Fréchet mean. Given a set of points $(x_1, ..., x_k)$ in a metric space $(\MM, d)$ and a set of non-negative weights $(\lambda_1, ..., \lambda_k)$ that sum to 1, a Fréchet mean of $(x_1, ..., x_k)$ with the weights $(\lambda_1, ..., \lambda_k)$ is defined as any solution of following minimization problem:
+A popular way to define a notion of barycenter on non-euclidian metric spaces is the notion of Fréchet mean. Given a set of points $(x^{(1)}, ..., x^{(k)})$ in a metric space $(\MM, \Delta)$ and a set of non-negative weights $(\lambda^{(1)}, ..., \lambda^{(k)})$ that sum to 1, a Fréchet mean of $(x^{(1)}, ..., x^{(k)})$ with the weights $(\lambda^{(1)}, ..., \lambda^{(k)})$ is defined as any solution of following minimization problem:
 
-$$\arg \min_{x \in \MM} \sum_{i=1}^k \lambda_i d(x_i, x)$$
+$$\arg \min_{x \in \MM} \sum_{i=1}^k \lambda^{(i)} \Delta(x^{(i)}, x)$$
 
-This notion enables in particular to define a notion of \emph{barycenter} between probability distributions for each possible notion of \emph{distance} between probability distributions. If we take for $\MM$ a set $\PP$ of probability distributions on $\R^d$ and for $d$ the Wasserstein distance under the $L_p$ objective between probability distributions, then we get the notion of \emph{Wasserstein barycenter (WB)} between the probability distributions. In short, a Wasserstein barycenter $\nu^*$ of the probability distributions $\mu_1, ..., \mu_k$ with the weights $\lambda_1, ..., \lambda_k$ is defined as
+This notion enables in particular to define a notion of \emph{barycenter} between probability distributions for each possible notion of \emph{distance} between probability distributions. If we take for $\MM$ a set $\PP$ of probability distributions on $\R^d$ and for $\Delta$ the Wasserstein distance under the $L_p$ objective between probability distributions, then we get the notion of \emph{Wasserstein barycenter (WB)} between probability distributions. In short, a Wasserstein barycenter $\nu^*$ of the probability distributions $\mu^{(1)}, ..., \mu^{(k)}$ with the weights $\lambda^{(1)}, ..., \lambda^{(k)}$ is defined as
 
-$$\nu^* \in \arg \min_{\nu \in \PP} \sum_{i=1}^k \lambda_i W_p(\mu_i, \nu)^p$$
+$$\nu^* \in \arg \min_{\nu \in \PP} \sum_{i=1}^k \lambda^{(i)} W_p(\mu^{(i)}, \nu)^p$$
 
-In the case of discrete input distributions, one can show that any Wasserstein barycenter $\nu^*$ is discrete, and that there exists a barycenter $\nu^*$ such that $|\nu^*| \leq \sum_{i=1}^k |\mu_i| - m + 1$, where $|\mu_i|$ denotes the support size of $\mu_i$ (\cite{borgwardt_computational_2022}). However, finding the support points of $\nu^*$ and optimizing their weights is NP-hard. More precisely, all known algorithm suffer an exponential dependance on the dimension. In \cite{izzo_dimensionality_2021}, the authors propose a dimensionality reduction method that enables to accelerate such algorithms. In this report, I present this method and numerical experiments I did to analyze its performance.
+In the case of discrete\footnote{In this report, I always mean ``discrete \emph{and} finite" when I say ``discrete".} probability distributions $\mu^{(1)}, ..., \mu^{(k)}$, one can show that any Wasserstein barycenter $\nu^*$ is discrete, and that there exists a barycenter $\nu^*$ such that $|\nu^*| \leq \sum_{i=1}^k |\mu^{(i)}| - k + 1$, where $|\mu^{(i)}|$ denotes the support size of $\mu^{(i)}$ (see for example \cite{borgwardt_computational_2022}). However, finding the support points of $\nu^*$ and optimizing their weights is NP-hard. More precisely, all known algorithm suffer an exponential dependence on the dimension \cite{altschuler_wasserstein_2022}. In an article entitled ``Dimensionality reduction for Wasserstein barycenter" \cite{izzo_dimensionality_2021} and published in October 2021, Izzo \emph{et al.} propose a dimensionality reduction method that enables to accelerate such algorithms. In this report, I present this method and numerical experiments I did to analyze its performance.
 
 \subsection{Previous works}
 
-Let us first review some known algorithms to compute Wasserstein barycenters in the discrete case. Those algorithms can be classified in two categories: the one that fix the support points of the barycenter and optimize only the weights (fixed support), and the one that optimize on both the weights and the support points (free support).
+In the last decade, several algorithms have been proposed to compute Wasserstein barycenters in the discrete case. Those algorithms can be classified in two categories: the one that fix the support points of the barycenter and optimize only the weights (fixed support), and the one that optimize on both the weights and the support points (free support).
 
-There exist two class of algorithms for the computation of Wasserstein barycenters with discrete support.
+\paragraph{Fixed support} In the fixed-support approximation, the Wasserstein barycenter problem reduces to a Linear Program, which can be solved either exactly or with entropic regularization (e.g. Iterative Bregman Projections \cite{benamou_iterative_2015}). The issue with this approach is that it approximates provably the true Wasserstein barycenter only if the fixed support points are an $\eps$-net of the space, but the number of required support points is then of the order of $1 / \eps^d$.
 
-\paragraph{Fixed-support} 
-
-\paragraph{Free support} \cite{cuturi_fast_2014}
+\paragraph{Free support} Algorithms such as the one presented in \cite{cuturi_fast_2014} and \cite{ye_fast_2017} optimize the true Wasserstein barycenter problem, with free support points, but don't give any theoritical guarantees for the convergence of the algorithm towards the true Wasserstein barycenter. The algorithm introduced in \cite{altschuler_wasserstein_2020} has theoretical guarantees but its running time suffers exponentially in the dimension.
 
 \subsection{Contributions}
+
+The main contribution of \cite{izzo_dimensionality_2021} is to propose a dimensionality reduction method based on the Johnson-Lindenstrauss lemma \cite{beals_extensions_1984} which allows to reduce considerably the running time of a Wasserstein barycenter algorithm with exponential dependence on the dimension, while preserving good accuracy. They also give some theoretical results about the optimality of their method and the NP-hardness of the approximation of the Wasserstein barycenter. Finally, they propose another method to improve running times based on the reduction of the number of input distributions. In this report, I will cover only the first point (the dimensionality reduction method).
 
 \section{Presentation of the method}
 
 \subsection{Characterization of the Wasserstein barycenter}
 
-Let $\nu^* = \sum_{j=1}^n b^*_j \delta_{y^*_j}$ be a Wasserstein barycenter of the distributions $\mu_1, ..., \mu_k$, where $\mu_i = \sum_{i=1}^T a_{i, j} \delta_{x_{i, j}}$.
+Let $\nu^* = \sum_{j=1}^n b^*_j \delta_{y^*_j}$ be a Wasserstein barycenter of the distributions $\mu^{(1)}, ..., \mu^{(k)}$, where $\mu^{(i)} = \sum_{j=1}^T a^{(i)}_j \delta_{x^{(i)}_j}$ and $x^{(i)}_j, y^*_j \in \R^d$.
 
 Then we know that 
 
 $$W_p(\mu_i, \nu)^p = \begin{cases}
-    \underset{w}{\min} \sum_{i, j, j'} w_{i,j,j'} ||x_{i, j} - y_{j'}||^p \\
-    \text{s.t. } \sum_j w_{i,j,j'} = b_j \text{ and } \sum_{j'} w_{i,j,j'} = a_{i,j}
+    \underset{w}{\min} \sum_{i, j, j'} w^{(i)}_{j, j'} ||x^{(i)}_j - y_{j'}||^p \\
+    \text{s.t. } \sum_j w^{(i)}_{j, j'} = b_j \text{ and } \sum_{j'} w^{(i)}_{j, j'} = a^{(i)}_j
 \end{cases}$$
 
 where $w \in \R^{k\times T \times n}$.
@@ -68,57 +73,131 @@ Therefore,
     \label{eqn:discretewb}
     b^*, y^*, w^* \in 
     \begin{cases}
-        \arg\min_{b, y, w} \sum_{i, j, j'} w_{i,j,j'} ||x_{i, j} - y_{j'}||^p \\
-        \text{s.t. } \sum_j w_{i,j,j'} = b_j \text{ and } \sum_{j'} w_{i,j,j'} = a_{i,j}
+        \arg\min_{b, y, w} \sum_{i, j, j'} w^{(i)}_{j, j'} ||x^{(i)}_j - y_{j'}||^p \\
+        \text{s.t. } \sum_j w^{(i)}_{j, j'} = b_j \text{ and } \sum_{j'} w^{(i)}_{j, j'} = a^{(i)}_j
     \end{cases}
 \end{align}
 
 Therefore, if we know $w^*$, we can deduce from it $b^*$ and $y^*$ by computing
 
 \begin{align}
-    b^*_j &= \sum_j w^*_{i,j,j'}  \label{eqn:b}\\
-    y^* &\in \arg \min_y \sum_{i, j, j'} w_{i,j,j'} ||x_{i, j} - y_{j'}||^p \label{eqn:y}
+    b^*_{j'} &= \sum_j w^{*(i)}_{j, j'}  \label{eqn:b}\\
+    y^*_{j'} &\in \arg \min_y \sum_{i, j, j'} w^{*(i)}_{j, j'} ||x^{(i)}_j - y_{j'}||^p \label{eqn:y}
 \end{align}
 
 In the case $p=2$, the second equality becomes
 
-\begin{align*}
-    y^*_{j'} &= \frac {\sum_{i, j} w_{i,j,j'} x_{i, j}} {\sum_{i, j} w_{i,j,j'}}
-\end{align*}
+\begin{align}
+    y^*_{j'} &= \frac {\sum_{i, j} w^{*(i)}_{j, j'} x^{(i)}_j} {\sum_{i, j} w^{*(i)}_{j, j'}} = \f 1 {kb^*_{j'}} \sum_{i, j} w^{*(i)}_{j, j'} x^{(i)}_j
+\end{align}
 
-\subsection{Johnson-Lindenstrauss lemma}
+and we have
+
+\begin{align}
+\label{eqn:dist2wb}
+\sum_{i, j} w^{*(i)}_{j, j'} ||x^{(i)}_j - y_{j'}||^2 &= \sum_{i, j} w^{*(i)}_{j, j'} ||x^{(i)}_j||^2 - kb^*_{j'} ||y_{j'}||^2
+\end{align}
+
+Moreover, it is easy to compute that
+
+\begin{align}
+\label{eqn:pairwisedist}
+\sum_{i_1, i_2, j_1, j_2} w^{*(i_1)}_{j_1, j'} w^{*(i_2)}_{j_2, j'} ||x^{(i_1)}_{j_1} - x^{(i_2)}_{j_2}||^2 &= 2 kb^*_{j'} \l( \sum_{i, j} w^{*(i)}_{j, j'} ||x^{(i)}_j||^2 - kb^*_{j'} ||y_{j'}||^2 \r)
+\end{align}
+
+Thus, from \ref{eqn:dist2wb} and \ref{eqn:pairwisedist} we can finally deduce
+
+\begin{align}
+\sum_{i, j, j'} w^{*(i)}_{j, j'} ||x^{(i)}_j - y_{j'}||^2 &= \sum_{i_1, i_2, j_1, j_2} \underbrace{ \sum_{j'} \f {w^{*(i_1)}_{j_1, j'} w^{*(i_2)}_{j_2, j'}} {2kb^*_{j'}} }_{W_{i_1, i_2, j_1, j_2}} \underbrace{||x^{(i_1)}_{j_1} - x^{(i_2)}_{j_2}||^2}_{C_{i_1, i_2, j_1, j_2}} \\
+&= W \cdot C \label{eqn:dotproduct}
+\end{align}
+
+Thus, in the case $p=2$, we have rewritten the cost of the Wasserstein barycenter $\nu^*$ as a dot product between a tensor $W$ that depends only on $w^*$ and a tensor $C$ that encodes the pairwise distances between the support points $(x^{(i)}_j)_{i, j}$. From now on, we will only consider the case $p=2$.
+
+\subsection{Johnson-Lindenstrauss projections}
 \label{subscn:johnson}
 
-The methods of the authors relies on following theorem:
+The method of the authors relies on the possibility to project points from a high dimensional space into a low dimensional space while preserving approximately the pairwise distances between the points. 
+To explain this, let us start with a lemma proved in \cite{kakade_random_2009} that states that a projection defined by a random Gaussian matrix preserves well the norms.
 
-\begin{theorem}[Johnson-Lindenstrauss]
-Let $\eps \in (0, 1/2)$. Let $x_1, ..., x_n \in \R^d$ and $k \geq \f {20 \log n} {\eps^2}$. There exists a Lipschitz mapping $f: \R^d \to \R^m$ such that
+\begin{lemma}[Norm preservation]
+\label{lemma:norm}
+Let $x\in \R^d$ and $\eps \in (0, 1/2)$. Assume that the entries in $A\subset \R^{m\times d}$ are sampled independently from $\NN(0, 1 / m)$. Then,
+$$\P \l( (1 - \eps) ||x||^2 \leq \l\lVert A x \r\rVert^2 \leq (1 + \eps) ||x||^2 \r) \geq 1 - 2e^{-(\eps^2 -\eps^3) m / 4} $$
+\end{lemma}
+
+\begin{proof}
+It follows from the fact that $\f {||Ax||^2} {||x||^2} \sim \chi^2_k$ and from a concentration inequality for the $\chi^2_k$ distribution.
+\end{proof}
+
+From that, it is easy to show that
+
+\begin{proposition}[Norm preservation]
+\label{prop:norm}
+Let $x_1, ..., x_n \in \R^d$ and $\eps \in (0, 1/2)$. Assume that the entries in $A\subset \R^{m\times d}$ are sampled independently from $\NN(0, 1 / m)$. Then,
+\begin{align*}
+    \P(\forall 1 \leq i, j\leq n, (1 - \eps) ||x_i - x_j||^2 \leq ||Ax_i - Ax_j||^2 \leq (1 + \eps) ||x_i - x_j||^2 ) &\\
+    \geq 1 - 2n^2e^{-\eps^2 m / 8} &
+\end{align*}
+This probability is higher than $1 - 2e^{-\alpha}$ if $m \geq \f 8 {\eps^2} (\alpha + 2 \log(n))$.
+\end{proposition}
+
+\begin{proof}
+    If we define $B_{i, j}$ as the event $(1 - \eps) ||x_i - x_j||^2 \leq ||Ax_i - Ax_j||^2 \leq (1 + \eps) ||x_i - x_j||^2$, then we have
+    \begin{align*}
+        \P(\exists 1 \leq i, j \leq n \text{ s.t. }  \overline{B_{i, j}}) &\leq \sum_{i, j} \P(\overline{B_{i, j}}) \\
+        &\leq 2n^2 e^{-(\eps^2 -\eps^3) m / 4}
+    \end{align*}
+    The final step is to use the fact that since $\eps \leq 1 / 2$, $\eps^2 - \eps^3 \geq \eps^2 / 2$.
+\end{proof}
+
+Finally, we can deduce the Johnson-Lindenstrauss lemma:
+
+\begin{theorem}[Johnson-Lindenstrauss \cite{beals_extensions_1984}]
+\label{thm:johnson}
+Let $x_1, ..., x_n \in \R^d$ and $\eps \in (0, 1/2)$. Let $m > \f 8 {\eps^2} \log(2n^2)$. There exists a Lipschitz mapping $f: \R^d \to \R^m$ such that
 $$\forall 1 \leq i, j \leq n, \quad (1 - \eps) ||x_i - x_j||^2 \leq ||f(x_i) - f(x_j)||^2 \leq (1 + \eps) ||x_i - x_j||^2$$
 \end{theorem}
 
-which itself can be proved using following theorem:
-
-\begin{theorem}[Norm preservation]
-Let $x\in \R^d$. Assume that the entries in $A\subset \R^{k\times d}$ are sampled independantly from $\NN(0, 1)$. Then,
-$$\P \l( (1 - \eps) ||x||^2 \leq \l\lVert \f 1 {\sqrt k} A x \r\rVert^2 \leq (1 + \eps) ||x||^2 \r) \geq 1 - 2e^{-(\eps^2 -\eps^3 k/4} $$
-\end{theorem}
-
-Thus a good candidate for a Johnson-Lindenstrauss projection is simply the function $f: x \mapsto \f 1 {\sqrt k} A x$
+\begin{proof}
+    Take $f: x \mapsto Ax$ with $A$ defined as in previous proposition. The probability that $f$ satisfies the condition is positive so such a map must exist.
+\end{proof}
 
 \subsection{Proposed method}
+\label{subscn:method}
 
 From the considerations of previous subsection, the authors of \cite{izzo_dimensionality_2021} deduce following dimensionality reduction method for the computation of discrete Wasserstein barycenters:
 
 \begin{enumerate}
-    \item Project the points $(x_{i, j})$ into a low dimensional space $\R^m$ using a projection that preserves well the pairwise distances between the input distribution support points (e.g. a random gaussian projection, see subsection \ref{subscn:johnson}).
-    \item Compute the Wasserstein barycenter in the low dimensional space.
-    \item Compute the optimal couplings $w^*$ for the low dimensional Wasserstein barycenter.
-    \item Use $w^*$ to compute $y^*$ and $b^*$ in the original high dimensional space by solving equations \ref{eqn:b} and \ref{eqn:y}.
+    \item Project the points $(x^{(i)}_j)$ into a low dimensional space $\R^m$ using a projection that preserves well the pairwise distances between the input distribution support points (e.g. a random gaussian projection, see subsection \ref{subscn:johnson}). This yields discrete distributions $\Tilde{\mu}^{(1)}, ..., \Tilde{\mu}^{(k)}$.
+    \item Compute the Wasserstein barycenter $\Tilde{\nu}^*$ in the low dimensional space.
+    \item Compute the optimal couplings $(\Tilde{w}^{*(i)})_i$ between the distributions $(\Tilde{\mu}^{(i)})_i$ and the barycenter $\Tilde{\nu}^*$.
+    \item Assume that the couplings $(\Tilde{w}^{(i)})_i$ are good approximations of optimal couplings between the distributions $(\mu^{(i)})_i$ and a true Wasserstein barycenter $\nu^*$ in $\R^d$, and use this approximation to compute $\overline{y}^*$ and $\overline{b}^*$ in the original high dimensional space by solving equations \ref{eqn:b} and \ref{eqn:y}. The discrete distribution $\overline{\nu}^* = \sum_j \overline{b}^*_j \delta_{\overline{y}^*_j}$ is then an approximation of $\nu^*$, for which we give theoretical guarantees in the next subsection.
 \end{enumerate}
 
-\section{Theoritical guarantees}
+\section{Theoretical guarantees}
 
+With the notations of the previous sections, let us note $W$ (resp. $\widetilde{W}$) the matrix of equation \ref{eqn:dotproduct} associated with $w^*$ (resp. $\Tilde{w}^*$), and $C$ (resp. $\widetilde{C}$) the matrix associated with $\mu^{(1)}, ..., \mu^{(k)}$ (resp. $\Tilde{\mu}^{(1)}, ..., \Tilde{\mu}^{(k)}$). Let us also note $\text{Cost}(\nu^*)$ the cost of the true Wasserstein barycenter in $\R^d$ and $\text{Cost}(\overline{\nu}^*)$ the cost of the Wasserstein barycenter computed with the dimensionality reduction method presented in subsection \ref{subscn:method}.
 
+Assume that the matrix $A$ with which we have projected the distributions $\mu^{(1)}, ..., \mu^{(k)}$, which happens with probability at least $1 - 2k^2T^2e^{-\eps^2 m / 8}$ according to Proposition \ref{prop:norm}. Then, we have
+
+\begin{align*}
+    \text{Cost}(\overline{\nu}^*) - \text{Cost}(\nu^*) &= \widetilde{W} \cdot C - W \cdot C \\
+    &= \widetilde{W} \cdot C - \widetilde{W} \cdot \widetilde{C} 
+    + \underbrace{\widetilde{W} \cdot \widetilde{C} - W \cdot \widetilde{C}}_{\leq 0} 
+    + W \cdot \widetilde{C} - W \cdot C \\
+    &\leq |\widetilde{W} \cdot C - \widetilde{W} \cdot \widetilde{C}| + |W \cdot \widetilde{C} - W \cdot C| \\
+    &\leq \eps \widetilde{W} \cdot C + \eps W \cdot C \\
+    &= \eps (\widetilde{W} \cdot C - W \cdot C) + 2 \eps W \cdot C
+\end{align*}
+
+Thus, 
+
+\begin{align}
+    \text{Cost}(\overline{\nu}^*) - \text{Cost}(\nu^*) &\leq \f {2\eps} {1 - \eps} W \cdot C
+\end{align}
+
+We have thus a theoretical guarantee on the quality of the Wasserstein barycenter obtained with the proposed dimensionality reduction method which holds with probability at least $1 - 2k^2T^2e^{-\eps^2 m / 8}$.
 
 \section{Numerics}
 
@@ -132,16 +211,173 @@ To implement the method of the authors and test it, I had to choose a specific a
     \item \verb|ot.lp.free_support_barycenter|: solves the linear program that one gets by fixing $b$ in the minimization problem \ref{eqn:discretewb}. Implements a variant of the method proposed in \cite{cuturi_fast_2014}.
 \end{itemize}
 
-As one can see, none of this three solves the entire minimization problem \ref{eqn:discretewb}. Moreover, this algorithms all have a linear dependance in the dimension, so dimensionality reduction wouldn't be very useful for them.
+As one can see, none of this three solves the entire minimization problem \ref{eqn:discretewb}. Moreover, these algorithms all have running times depending linearly in the dimension, so dimensionality reduction wouldn't be very useful for them.
 
-Therefore, I decided to take a look at the algorithm used by the authors of \cite{izzo_dimensionality_2021} for their paper. The authors indicate that they used the implementation \cite{ye_efficient_2022} with default settings. This GitHub repository implements several Wasserstein barycenter algorithms in MatLab. By taking a look at the main function \verb|Wasserstein_Barycenter.m|, I figured out that the default method is Bregmann ADMM, a method proposed in \cite{ye_fast_2017}. However, I didn't find any Python implementation of this method.
+Therefore, I decided to take a look at the algorithm used by the authors of \cite{izzo_dimensionality_2021} for their paper. The authors indicate that they used the implementation \cite{ye_efficient_2022} with default settings. This GitHub repository implements several Wasserstein barycenter algorithms in MatLab. By taking a look at the main function \verb|Wasserstein_Barycenter.m|, I figured out that the default method is Bregman ADMM, a method introduced in \cite{ye_fast_2017}. However, this algorithm also has a running time depending linearly on the dimension and it doesn't have any public Python implementation.
 
-A special case of Wasserstein barycenters is the case $k=2$. Indeed, in this case, one can show that the Wasserstein barycenter of $\mu_1$ and $\mu_2$ can be computed by comp
+Therefore, I decided to consider the special case $k=2$, for which the computation of the Wasserstein barycenter is much simpler, as we will see in next subsection.
+
+\subsection{Special case: $k=2$}
+A special case of Wasserstein barycenters is the case $k=2$. Indeed, let $\mu^{(1)}$ and $\mu^{(2)}$ be two discrete distributions on $\R^d$ and let $T$ be their common support size, so that
+
+\begin{align*}
+    \mu^{(1)} &= \sum_[j=1]^T a^{(1)}_j \delta_{x^{(1)}_j} \\
+    \mu^{(2)} &= \sum_[j=1]^T a^{(2)}_j \delta_{x^{(2)}_j}
+\end{align*}
+
+and let $w\in\R^{T\times T}$ be the optimal coupling between both distributions.
+Then the Wasserstein barycenter of $\mu^{(1)}$ and $\mu^{(2)}$ with weights $1 - \lambda$ and $\lambda$ is
+$$\nu^* = \sum_{j,j'} w_{j, j'} \delta_{(1-\lambda)x_{1,j} + \lambda x_{2, j'}}$$
+and the associated cost is $\lambda(1 - \lambda) W_2(\mu^{(1)}, \mu^{(2)})^2$. Thus, $n=T$ and it is very easy to compute the Wasserstein barycenter from the optimal coupling $w$. Moreover, to study the error made on the cost of the Wasserstein barycenter by projecting the points to a lower dimension, it is sufficient to study the error made on the Wasserstein distance.
+I thus made the computations of Wasserstein barycenters in my numerics with the function \verb|ot.emd| of the Python Optimal Transport library.
+
+\subsection{Data}
+\label{subscn:data}
+
+I used three different types of pairs of discrete distributions $(\mu^{(1)}, \mu^{(2)})$ for my numerics:
+\begin{enumerate}
+    \item Discrete distributions with uniform weights $a^{(i)}_j = 1 / T$ and $x^{(i)}_j$ sampled randomly and independently from $\NN(0, I)$ in $\R^{300}$ (labeled ``offset$=0$" in the figures).
+    \item Same as before but with an offset of 10 on the first dimension for $\mu^{(2)}$ (labeled ``offset$=10$" in the figures).
+    \item Aligned word vectors for French and English in dimension 300 downloaded from fastText \cite{noauthor_aligned_nodate} (labeled ``word vectors" in the figures). The alignments have been performed with the RCSLS method described in \cite{joulin_loss_2018} and \cite{bojanowski_enriching_2017}.
+\end{enumerate}
+
+\subsection{Measure of the quality of a Wasserstein barycenter}
+
+To measure the quality of a Wasserstein barycenter obtained with the dimensionality reduction method of the authors, compared to the true Wasserstein barycenter, I measured the ratio of their costs in the high-dimensional space $\R^d$:
+
+$$\text{Quality ratio} = \frac {\text{cost of the WB computed with dimensionality reduction}} {\text{cost of the true WB}}$$
+
+%-------------------------------------
+% Exp 1
+%-------------------------------------
+\subsection{Experiment 1: Influence of the projection dimension $m$ on the quality of the result}
+
+My first experiment was to measure the influence of the projection dimension $m$ on the quality of the result. I designed following protocol for this experiment:
+
+\begin{enumerate}
+    \item Take two discrete distributions $\mu_1, \mu_2 \in \R^{T \times d}$
+    \item For each $m$ in a given set of possible values for $m$:
+    \begin{enumerate}
+        \item Repeat $K$ times:
+        \begin{enumerate}
+            \item Project $\mu_1$ and $\mu_2$ to $\R^m$ using a random Gaussian projection.
+            \item Compute the optimal coupling $\Tilde{w}^*$ between the projected distributions 
+            \item Compute the cost of $\Tilde{w}^*$ as a coupling between $\mu_1$ and $\mu_2$ and compare it to the optimal cost. Store the quality ratio in an array.
+        \end{enumerate}
+        \item Compute a confidence interval for the quality ratio for the current value of $m$.
+    \end{enumerate}
+    \item Plot the confidence intervals as functions of $m$.
+\end{enumerate}
+
+The result of this experiment for the three pairs of input distributions described in subsection \ref{subscn:data} is plotted in Figure \ref{fig:exp1}. I used $d=300$, $T=n=100$ and $K=30$.
+
+\begin{figure*}
+  \centering
+  \includegraphics[keepaspectratio, width=\textwidth]{graphics/experiment_1.png}
+  \caption{Influence of the projection dimension $m$ on the quality of the result}
+  \label{fig:exp1}
+\end{figure*}
+
+%-------------------------------------
+% Exp 2
+%-------------------------------------
+\subsection{Experiment 2: Influence of the original $d$ on the quality of the result}
+
+My second experiment was to measure the influence of the original dimension $d$ on the quality of the result. I designed following protocol for this experiment:
+
+\begin{enumerate}
+    \item Take two discrete distributions $\mu_1, \mu_2 \in \R^{T \times d_0}$.
+    \item Permute randomly their components.
+    \item For each $d\leq d_0$ in a given set of possible values for $d$:
+    \begin{enumerate}
+        \item Project $\mu_1$ and $\mu_2$ to $\R^d$ by selecting their first $d$ components. This yields to new distributions $\overline{\mu}_1$ and $\overline{\mu}_2$.
+        \item Repeat $K$ times:
+        \begin{enumerate}
+            \item Project $\overline{\mu}_1$ and $\overline{\mu}_2$ to $\R^m$ using a random Gaussian projection.
+            \item Compute the optimal coupling $\Tilde{w}^*$ between the projected distributions. 
+            \item Compute the cost of $\Tilde{w}^*$ as a coupling between $\overline{\mu}_1$ and $\overline{\mu}_2$ and compare it to the optimal cost. Store the quality ratio in an array.
+        \end{enumerate}
+        \item Compute a confidence interval for the quality ratio for the current value of $d$.
+    \end{enumerate}
+    \item Plot the confidence intervals as functions of $d$.
+\end{enumerate}
+
+The result of this experiment for the three pairs of input distributions described in subsection \ref{subscn:data} is plotted in Figure \ref{fig:exp4}. I used $d_0=300$, $m=30$, $T=n=100$ and $K=30$.
+
+\begin{figure*}
+  \centering
+  \includegraphics[keepaspectratio, width=\textwidth]{graphics/experiment_4.png}
+  \caption{Experiment 2: Influence of the original $d$ on the quality of the result}
+  \label{fig:exp4}
+\end{figure*}
+
+
+%-------------------------------------
+% Exp 3
+%-------------------------------------
+\subsection{Experiment 3: Influence of the support size $T$ on the quality of the result}
+
+My second experiment was to measure the influence of the original dimension $d$ on the quality of the result. I designed following protocol for this experiment:
+
+\begin{enumerate}
+    \item Take two discrete distributions $\mu_1, \mu_2 \in \R^{T_0 \times d}$ 
+    \item Shuffle randomly their support points.
+    \item For each support size $T \leq T_0$ in a given set of possible values for $T$:
+    \begin{enumerate}
+        \item Use the $T$ first rows of $\mu_1$ and $\mu_2$ to define two distributions $\overline{\mu_1}$ and $\overline{\mu_2}$ with support size $T$.
+        \item Repeat $K$ times:
+        \begin{enumerate}
+            \item Project them to $\R^m$ using a random Gaussian projection.
+            \item Compute the optimal coupling $\Tilde{w}^*$ between the projected distributions. 
+            \item Compute the cost of $\Tilde{w}^*$ as a coupling between $\overline{\mu_1}$ and $\overline{\mu_2}$ and compare it to the optimal cost. Store the quality ratio in an array.
+        \end{enumerate}
+        \item Compute a confidence interval for the quality ratio for the current value of $T$.
+    \end{enumerate}
+\end{enumerate}
+
+The result of this experiment for the three pairs of input distributions described in subsection \ref{subscn:data} is plotted in Figure \ref{fig:exp2}. I used $d=300$, $m=30$, $T_0=1000$ and $K=30$.
+
+\begin{figure*}
+  \centering
+  \includegraphics[keepaspectratio, width=\textwidth]{graphics/experiment_2.png}
+  \caption{Influence of the support size $T$ on the quality of the result}
+  \label{fig:exp2}
+\end{figure*}
+
+%-------------------------------------
+% Exp 4
+%-------------------------------------
+\subsection{Experiment 4: Distortion of the distance matrix}
+
+My fourth experiment was to measure the distortion of the distance matrix induced by the projection into the low dimensional space $\R^m$. More specifically, for two discrete distributions $(\mu^{(1)}, \mu^{(2)})$, let us note $D_{j, j'} := ||x^{(1)}_j - x^{(2)}_{j'}||^2$ the distance matrix between their support points. After projection into $\R^m$ with a random Gaussian matrix $A$, the new distance matrix between the support points is $\Tilde{D}_{j, j'} := ||Ax^{(1)}_j - Ax^{(2)}_{j'}||^2$. My fourth experiment was to plot histograms of the values of $\Tilde{D}_{j, j'} / D_{j, j'}$ for different input distributions and projection dimensions $m$.
+
+The results of this experiment for the three pairs of input distributions described in subsection \ref{subscn:data} and for three different values of $m$ are plotted in Figure \ref{fig:exp2}. I used $d=300$ and $T=1000$ in this experiment. One can see that the distributions of the values of $\Tilde{D}_{j, j'} / D_{j, j'}$ look like normalized $\chi^2$ distributions with an increasing number of degrees of freedom when $m$ increases. They thus seem to converge to a normal distribution centered around 1, with a standard deviation that converges towards $0$ at a speed compatible with $\epsilon \sim 1 / \sqrt{m}$ (see proposition \ref{prop:norm}).
+
+\begin{figure*}
+  \centering
+  \includegraphics[keepaspectratio, width=\textwidth]{graphics/experiment_3_m=3.png}
+  \includegraphics[keepaspectratio, width=\textwidth]{graphics/experiment_3_m=30.png}
+  \includegraphics[keepaspectratio, width=\textwidth]{graphics/experiment_3_m=300.png}
+  \caption{Distortion of the distance matrix}
+  \label{fig:exp3}
+\end{figure*}
 
 \section{Conclusion and perspective}
 
-\section{Connection with the course}
+\paragraph{Conclusion} To conclude, we have seen that all known algorithms to compute the Wasserstein barycenter of discrete distributions in $\R^d$ have a time complexity that depends exponentially on the dimension $d$. The method introduced in ``Dimensionality reduction for Wasserstein barycenter" \cite{izzo_dimensionality_2021} leverages the Johnson-Lindenstrauss lemma to project the input distributions into a low-dimensional space $\R^m$ and thus make the computation of an approximate Wasserstein barycenter tractable for high-dimensional data. The minimum projection dimension $m$ required to preserve the quality of the solution up to a factor $1 \pm \eps$ depends only logarithmically on the support size $T$ and does not depend on $d$, so the method can apply to very large and high dimensional data. However, it depends quadratically on $1 / \eps$, so one cannot hope to achieve very accurate solutions with this method. Moreover, in practice, popular algorithms for the computation of the Wasserstein barycenter have a time complexity that scales well with the dimension of the input data, either because they make a fixed-support approximation, or because they renounce to give theoretical guarantees for the quality of the Wasserstein barycenter. Dimensionality reduction methods are truly useful only for algorithms that have a time complexity that depends exponentially on the dimension, and there seems to be no available implementation of such an algorithm currently. Even the authors test their method on an algorithm that scales well with dimension (Bregman ADMM). 
 
+\paragraph{Possible improvements} It would be interesting to see if this method makes algorithms computing the true Wasserstein barycenter of discrete distributions with theoretical guarantees competitive with all those who renounced it, like fixed-support algorithms, or free-support without theoretical guarantees.
+
+\section{Connection with the course}
+The notions used in the article are related to following notions of the course:
+\begin{itemize}
+    \item Wasserstein distance associated to an $L_p$ objective in $\R^d$.
+    \item Formulation of the optimal transport problem between discrete distributions in $\R^d$ as a Linear Program.
+    \item Adaptation of algorithms for the computation of optimal transport to compute Wasserstein barycenters (for example Sinkhorn adapted to Iterative Bregman Projections in \cite{benamou_iterative_2015}).
+\end{itemize}
+
+
+\newpage
 \printbibliography
 
 \end{document}
